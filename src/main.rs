@@ -149,7 +149,7 @@ fn main() {
         };
         let path = item.path();
         if path.is_dir() {
-            eprintln!("Info: Skipping directory {:?}", path); // Optional: log skipped directories
+            eprintln!("Info: Skipping directory {:?}", path);
             return 0; // Indicate that this directory was not processed as an image
         }
         let file_name = match path.file_name() {
@@ -175,8 +175,6 @@ fn main() {
             }
             1
         } else {
-            // The original `img` variable (from line 130) holds the Result here.
-            // We can extract the error if it's an Err variant.
             if let Err(e) = img {
                 eprintln!("Warning: Failed to open image {:?}: {}. Skipping.", path, e);
             }
