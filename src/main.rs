@@ -49,18 +49,16 @@ fn main() {
         let processed_count = processed_count.clone();
         let output = args.output.clone();
         handles.push(thread::spawn(move || {
-            let mut local_count = 0;
             for path in chunk {
                 let output_path = output.join(path.file_name().unwrap());
                 let img = image::open(&path);
                 if let Ok(img) = img {
                     let thumbnail = img.thumbnail(64, 64);
                     thumbnail.save(output_path).unwrap();
-                    local_count += 1;
+                    let mut writer = processed_count.lock().unwrap();
+                    *writer += 1;
                 }
             }
-            let mut writer = processed_count.lock().unwrap();
-            *writer += local_count;
         }))
     }
 
