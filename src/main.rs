@@ -26,7 +26,13 @@ fn main() {
             std::process::exit(1);
         }
     }
-    create_dir_all(&args.output).unwrap();
+    if let Err(e) = create_dir_all(&args.output) {
+        eprintln!(
+            "Error: Failed to create output directory {:?}: {}",
+            args.output, e
+        );
+        std::process::exit(1);
+    }
 
     // 1． スレッド処理を分割して、各スレッドが独立して処理を行う実装
     // Arc, Mutexを使って、スレッド間で共有するデータを管理する
