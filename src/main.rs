@@ -128,17 +128,58 @@ fn main() {
 
     // 3. rayonを使って、並列処理を行う実装
     use rayon::prelude::*;
-    let items: Vec<_> = read_dir(&args.input).unwrap().collect();
+    let items: Vec<Result<std::fs::DirEntry, std::io::Error>> = match read_dir(&args.input) {
+        Ok(dir_iterator) => dir_iterator.collect(),
+        Err(e) => {
+            eprintln!(
+                "Error: Failed to read input directory {:?}: {}",
+                args.input, e
+            );
+            std::process::exit(1);
+        }
+    };
     let result = items.into_par_iter().map(|item| {
-        let item = item.unwrap();
+        let item = match item {
+            // `item` here is a Result<DirEntry, std::io::Error>
+            Ok(entry) => entry,
+            Err(e) => {
+                eprintln!("Warning: Skipping an entry due to read error: {}", e);
+                return 0; // Indicate that this item was not processed
+            }
+        };
         let path = item.path();
-        let output_path = args.output.join(path.file_name().unwrap());
+        if path.is_dir() {
+            eprintln!("Info: Skipping directory {:?}", path); // Optional: log skipped directories
+            return 0; // Indicate that this directory was not processed as an image
+        }
+        let file_name = match path.file_name() {
+            Some(name) => name,
+            None => {
+                eprintln!(
+                    "Warning: Skipping path without a valid file name: {:?}",
+                    path
+                );
+                return 0; // Indicate no processing for this item
+            }
+        };
+        let output_path = args.output.join(file_name);
         let img = image::open(&path);
         if let Ok(img) = img {
             let thumbnail = img.thumbnail(64, 64);
-            thumbnail.save(&output_path).unwrap();
+            if let Err(e) = thumbnail.save(&output_path) {
+                eprintln!(
+                    "Error: Failed to save thumbnail for {:?} to {:?}: {}",
+                    path, output_path, e
+                );
+                return 0; // Indicate failure for this item
+            }
             1
         } else {
+            // The original `img` variable (from line 130) holds the Result here.
+            // We can extract the error if it's an Err variant.
+            if let Err(e) = img {
+                eprintln!("Warning: Failed to open image {:?}: {}. Skipping.", path, e);
+            }
             0
         }
     });
